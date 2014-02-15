@@ -16,7 +16,8 @@ var conf = {
 	redraw_interface: true,
 	mouse_m: 0,
 	lag:0,
-	game_paused: true
+	game_paused: true,
+	wave:0
 }
 //Data
 var player_data = {
@@ -43,20 +44,33 @@ var player_data = {
 var map = {
 	conf:{
 		x0:0,y0:0,
-		x1:-10000,y1:10000,
-		buildings:500
+		x1:1000,y1:1000,
+		buildings:5
 	},
 	buildings:[],
-	waves:[]
+	//[ms,lvl,num]
+	waves:[	[0,1,1],
+			[-1,2,1],
+			[10000,2,1],
+			[10000,2,1],
+			[-1,1,2],
+			[10000,5,2],
+			[10000,5,2],
+			[10000,20,2],
+			[15000,40,3],
+			[-1,5,5],
+			[10000,1,40],
+			[-1,15,50],
+			[-1,1,150]]
 };
 var player = {};
 var units = [];
 var shots = [];
 
 //Images
-var images_src_tanks = [[0,'images/tank01.svg'],
-						[1,'images/tank02.svg']];
-var images_src_turrets = [[0,'images/turret01.svg']];
+var images_src_tanks = [[0,'images/tank00.svg'],
+						[1,'images/tank01.svg']];
+var images_src_turrets = [[0,'images/turret00.svg']];
 var images_tanks = {};
 var images_turrets = {};
 for (var i in images_src_tanks) {
@@ -93,7 +107,9 @@ if (typeof io !== 'undefined'){
 		//console.log(units);
 	});
 }
-//Model
+/*
+	-------------------- MODEL --------------------
+*/
 function tank(data){
 	this.id = conf.id_count++;
 	this.img = data.img||images_tanks[1];
@@ -212,6 +228,8 @@ function tank(data){
 			log('Tanks',units.length);
 			if(this.is_player){
 				pause_toggle();//GAME OVER
+			} else {
+				waves();
 			}
 		}
 		if(this.is_player){
@@ -273,15 +291,13 @@ var keys = {
 	'right': function(val){movement('right',val)},	//D
 	'pause': function(val){pause_toggle(val)}
 }
-//Controller
+/*
+	-------------------- CONTROLLER --------------------
+*/
 function init(){
 	conf.time = new Date().getTime();
 	player = new tank(player_data);
 	units.push(player);
-	for (var i = 0; i < 5; i++) {
-		createTanks(70,i);
-	};
-	createTanks(4,50);
 	for (var i = 0; i < map.conf.buildings; i++) {
 		map.buildings.push(new building({}));
 	};
@@ -296,6 +312,7 @@ function init(){
 	draw();
 	pause_toggle();
 	log('Tanks',units.length);
+	waves();
 };
 setTimeout(init,500);
 function mouseDown (e) {
@@ -343,6 +360,18 @@ function pause_toggle(val){
 	}
 	conf.game_paused = !conf.game_paused;
 }
+function waves(){
+	if(map.waves[conf.wave][0] == -1 && units.length > 1){
+		return;
+	}
+	log('Wave',conf.wave);
+	createTanks(map.waves[conf.wave][1],map.waves[conf.wave][2]);
+	var time = map.waves[conf.wave++][0];
+	log('Time',time);
+	if(time >= 0){
+		setTimeout(waves,time);
+	}
+}
 function controller(){
 	var time = new Date().getTime()-conf.time;
 	conf.time += time;
@@ -367,7 +396,9 @@ function controller(){
 	};
 	draw();
 };
-//View
+/*
+	-------------------- VIEW --------------------
+*/
 function draw() {
 	ctx.fillStyle = conf.color_background;
 	ctx.fillRect(0, 0, canvas.width(), canvas.height());
@@ -453,7 +484,9 @@ function drawInterface(){
 	ctx_if.fillStyle = 'black';
 	ctx_if.fillText(player.speed,player.speed<0?70:40,115);
 }
-//Helpers
+/*
+	-------------------- HELPERS --------------------
+ */
 function rand(val,off){
 	return Math.floor(Math.random()*val)+(off||0);
 };
